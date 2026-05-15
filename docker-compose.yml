@@ -1,0 +1,47 @@
+# JVM services read HOCON defaults from the image; `environment:` sets process env overrides
+# (broker hostname on the Compose network, file-backed H2 URL for ordering-api). Other keys use classpath defaults.
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  ordering-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: ordering-api
+    ports:
+      - "8080:8080"
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      DATABASE_URL: jdbc:h2:file:/data/restaurant;MODE=PostgreSQL
+    volumes:
+      - ordering-h2:/data
+    depends_on:
+      - rabbitmq
+
+  kitchen-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: kitchen-service
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      - rabbitmq
+
+  runner-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: runner-service
+    environment:
+      RABBITMQ_HOST: rabbitmq
+    depends_on:
+      - rabbitmq
+
+volumes:
+  ordering-h2: {}
